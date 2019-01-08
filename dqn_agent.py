@@ -216,6 +216,7 @@ class Agent():
 
         # ------------------- update target network ------------------- #
         self.soft_update(self.qnetwork_local, self.qnetwork_target, TAU)                     
+        self.soft_update(self.qnetwork_explore, self.qnetwork_explore_target, TAU)   
 
     def soft_update(self, local_model, target_model, tau):
         """Soft update model parameters.

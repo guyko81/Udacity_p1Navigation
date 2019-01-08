@@ -28,5 +28,6 @@ class State(nn.Module):
         x = self.fc2(x)
         x = F.relu(x)
         x = self.out(x)
+        x = F.sigmoid(x)
         
         return x
