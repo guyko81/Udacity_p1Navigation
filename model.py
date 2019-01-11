@@ -27,33 +27,36 @@ class QNetwork(nn.Module):
         self.V = nn.Linear(hidden_sizes[4], 1)
         self.A_ = nn.Linear(hidden_sizes[4], hidden_sizes[4])
         self.A = nn.Linear(hidden_sizes[4], action_size)
-        
-        self.out = nn.Linear(hidden_sizes[4], action_size)
 
 
     def forward(self, state):
         """Build a network that maps state -> action values."""
         x = self.fc1(state)
         x = F.relu(x)
+        x = F.dropout(x, p=0.1)
         x = self.fc2(x)
         x = F.relu(x)
+        x = F.dropout(x, p=0.1)
         x = self.fc3(x)
         x = F.relu(x)
+        x = F.dropout(x, p=0.1)
         x = self.fc4(x)
         x = F.relu(x)
+        x = F.dropout(x, p=0.1)
         x = self.fc5(x)
         x = F.relu(x)
         
         V_ = self.V_(x)
         V_ = F.relu(V_)
-        V = self.V(V_)
+        #V = self.V(V_)
+        out_sigma = self.V(V_)
+        out_sigma = F.softplus(out_sigma)
 
         A_ = self.A_(x)
         A_ = F.relu(A_)
-        A = self.A(A_)
+        #A = self.A(A_)
+        out_mu = self.A(A_)
 
-        out = V + A - torch.mean(A, dim=1, keepdim=True)
-        """
-        out = self.out(x)
-        """
-        return out
+        #out = V + A - torch.mean(A, dim=1, keepdim=True)
+
+        return out_mu, out_sigma

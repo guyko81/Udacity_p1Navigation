@@ -20,6 +20,7 @@ LR = 5e-4               # learning rate
 UPDATE_EVERY = 1        # how often to update the network
 UPDATE_EVERY2 = 2
 LR2 = 5e-4
+num_of_batch_step = 1
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -76,8 +77,9 @@ class Agent():
         if self.t_step == 0:
             # If enough samples are available in memory, get random subset and learn
             if len(self.memory) > BATCH_SIZE:
-                experiences = self.memory.sample()
-                self.learn(experiences, GAMMA)
+                for b in range(num_of_batch_step):
+                    experiences = self.memory.sample()
+                    self.learn(experiences, GAMMA)
 
     def act(self, state, eps=0.):
         """Returns actions for given state as per current policy.
@@ -95,42 +97,22 @@ class Agent():
             action_policy_explore = F.softmax(self.policy_network_explore(state), dim=1)
         self.policy_network.train()
         self.policy_network_explore.train()
+
+        def softmax(x):
+            e_x = np.exp(x - np.max(x))
+            return e_x / e_x.sum(axis=1) 
         
-        action_policy = action_policy.data.cpu().numpy().astype(float)
-        action_policy /= np.sum(action_policy)
+        action_policy = softmax(action_policy.data.cpu().numpy().astype(float))
 
-        action_policy_explore = action_policy_explore.data.cpu().numpy().astype(float)
-        action_policy_explore /= np.sum(action_policy_explore)
+        action_policy_explore = softmax(action_policy_explore.data.cpu().numpy().astype(float))
 
-        # Averaging the 2 policies in the log-odds space
-        #action_policy_ln = np.log(action_policy/(1-action_policy))
-        #action_policy_explore_ln = np.log(action_policy_explore/(1-action_policy_explore))
-        #action_policy_ln_avg = (action_policy_ln + action_policy_explore_ln)/2
-        #action_policy_avg = 1/(1+np.exp(-action_policy_ln_avg))
-        action_policy_avg = action_policy * action_policy_explore
-        action_policy_avg /= np.sum(action_policy_avg)
+        action_policy_avg = softmax(action_policy * action_policy_explore)
 
         return np.argmax(np.random.multinomial(1, action_policy_avg[0])).astype(int)
-        
-        """
-        # Epsilon-greedy action selection
-        if random.random() > eps:
-            return np.argmax(action_policy.cpu().data.numpy())
-        else:
-            return random.choice(np.arange(self.action_size))
-        """
-        
-        """
-        # Epsilon-greedy action selection
-        if random.random() > eps:
-            return np.argmax(action_values.cpu().data.numpy()).astype(int)
-        else:
-            return random.choice(np.arange(self.action_size)).astype(int)
-        """
+
         
     def learn(self, experiences, gamma):
         """Update value parameters using given batch of experience tuples.
-
         Params
         ======
             experiences (Tuple[torch.Variable]): tuple of (s, a, r, s', done) tuples 
@@ -138,90 +120,74 @@ class Agent():
         """
         states, actions, rewards, next_states, dones = experiences
 
-        # Get max predicted Q values (for next states) from target model
-        #Q_targets_next = self.qnetwork_target(next_states).detach().max(1)[0].unsqueeze(1)
+        # Get expected predicted Q values (for next states) from target model and the action policy network
         action_policy_next = F.softmax(self.policy_network(next_states).detach(), dim=1).unsqueeze(1)
-        Q_targets_next = torch.matmul(action_policy_next, self.qnetwork_target(next_states).detach().unsqueeze(2)).squeeze().unsqueeze(1)
+        #action_policy_explore_next = F.softmax(self.policy_network_explore(next_states).detach(), dim=1).unsqueeze(1)
+        #action_policy_avg_next = F.softmax(action_policy_next * action_policy_explore_next, dim=1)
+
+        
+        self.qnetwork_target.eval()
+        Q_target_mu, Q_target_sigma = self.qnetwork_target(next_states)
+        self.qnetwork_target.train()
+        
+        Q_targets_next = torch.matmul(action_policy_next, Q_target_mu.detach().unsqueeze(2)).squeeze().unsqueeze(1)
         
         # Compute Q targets for current states 
         Q_targets = rewards + (gamma * Q_targets_next * (1 - dones))
 
-        # Get expected Q values from local model
-        Q_expected = self.qnetwork_local(states).gather(1, actions)
 
+        # Get expected Q values and std from local model
+        self.qnetwork_local.eval()
+        Q_local_mu, Q_local_sigma = self.qnetwork_local(states)
+        Q_expected_mu = Q_local_mu.gather(1, actions)
+        Q_expected_sigma = Q_local_sigma.gather(1, actions)
+        self.qnetwork_local.train()
+        
+        def GAUSS_NLL(mu, sigmasq, target):
+            log_likelihood = torch.distributions.Normal(mu, sigmasq).log_prob(target)
+            loss = torch.mean(-log_likelihood)
+            return loss
+        
         # Compute loss
-        loss = F.mse_loss(Q_expected, Q_targets)
+        #loss = F.mse_loss(Q_expected, Q_targets)
+        loss = GAUSS_NLL(Q_expected_mu, Q_expected_sigma, Q_targets)
         # Minimize the loss
         self.qnetwork_optimizer.zero_grad()
         loss.backward()
         self.qnetwork_optimizer.step()
 
 
-        
-        # Exploration reward
-        state_prediction = self.state_network(next_states)
-        state_embedding = self.static_state_network(next_states).detach()
-        rewards_explore = ((state_prediction - state_embedding)**2).mean(dim=1)
-
-        # Get max predicted Q values (for next states) from target model for exploration model
-        #Q_targets_next = self.qnetwork_target(next_states).detach().max(1)[0].unsqueeze(1)
-        action_policy_explore_next = F.softmax(self.policy_network_explore(next_states).detach(), dim=1).unsqueeze(1)
-        Q_targets_explore_next = torch.matmul(action_policy_explore_next, self.qnetwork_explore_target(next_states).detach().unsqueeze(2)).squeeze().unsqueeze(1)
-
-        # Compute Q targets for current states 
-        Q_targets_explore = rewards_explore + (gamma * Q_targets_explore_next * (1 - dones))
-
-        # Get expected Q values from local model
-        Q_expected_explore = self.qnetwork_explore(states).gather(1, actions)
-
-        # Compute loss
-        loss_explore = F.mse_loss(Q_expected_explore, Q_targets_explore)
-        # Minimize the loss
-        self.qnetwork_explore_optimizer.zero_grad()
-        loss_explore.backward(retain_graph=True) # we want to keep the rewards_explore values for later
-        self.qnetwork_explore_optimizer.step()
-
-        
-
-        # State prediction optimization
-        rewards_explore_loss = rewards_explore.mean(dim=0)
-        self.state_network_optimizer.zero_grad()
-        rewards_explore_loss.backward()
-        self.state_network_optimizer.step()
-
 
         self.t_step2 = (self.t_step2 + 1) % UPDATE_EVERY2
         if self.t_step2 == 0:
 
             # Action policy
-            Q_targets_max = self.qnetwork_local(states).detach().max(1)[1]
+            Q_max = Q_local_mu.detach().max(1)[1] # maximum Q value
             policy = self.policy_network(states)
 
-            policy_loss = F.cross_entropy(policy, Q_targets_max)
+            policy_loss = F.cross_entropy(policy, Q_max)
 
             self.policy_optimizer.zero_grad()
             policy_loss.backward()
             self.policy_optimizer.step()
 
 
-            # Exploration policy
-            Q_targets_explore_max = self.qnetwork_explore(states).detach().max(1)[1]
-            policy_explore = self.policy_network_explore(states)
+            # Exploration policy, calculated on next state with target Q network
+            Q_explore_max = Q_target_sigma.detach().max(1)[1] # maximum entropy
+            policy_explore = self.policy_network_explore(next_states)
 
-            policy_explore_loss = F.cross_entropy(policy_explore, Q_targets_explore_max)
+            policy_explore_loss = F.cross_entropy(policy_explore, Q_explore_max)
 
             self.policy_explore_optimizer.zero_grad()
             policy_explore_loss.backward()
             self.policy_explore_optimizer.step()
 
         # ------------------- update target network ------------------- #
-        self.soft_update(self.qnetwork_local, self.qnetwork_target, TAU)                     
-        self.soft_update(self.qnetwork_explore, self.qnetwork_explore_target, TAU)   
+        self.soft_update(self.qnetwork_local, self.qnetwork_target, TAU)
 
     def soft_update(self, local_model, target_model, tau):
         """Soft update model parameters.
         θ_target = τ*θ_local + (1 - τ)*θ_target
-
         Params
         ======
             local_model (PyTorch model): weights will be copied from
@@ -237,7 +203,6 @@ class ReplayBuffer:
 
     def __init__(self, action_size, buffer_size, batch_size, seed):
         """Initialize a ReplayBuffer object.
-
         Params
         ======
             action_size (int): dimension of each action
