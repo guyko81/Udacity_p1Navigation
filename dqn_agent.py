@@ -44,29 +44,16 @@ class Agent():
         # Q-Network
         self.qnetwork_local = QNetwork(state_size, action_size, seed).to(device)
         self.qnetwork_target = QNetwork(state_size, action_size, seed).to(device)
-        self.policy_network = Policy(state_size, action_size, seed).to(device)
-
-        self.qnetwork_explore = QNetwork(state_size, action_size, seed).to(device)
-        self.qnetwork_explore_target = QNetwork(state_size, action_size, seed).to(device)
-        self.policy_network_explore = Policy(state_size, action_size, seed).to(device)
-
-        self.state_network = State(state_size, self.embedding_size, seed).to(device)
-        self.static_state_network = State(state_size, self.embedding_size, seed).to(device)
+        self.policy_network = QNetwork(state_size, action_size, seed).to(device)
 
         self.qnetwork_optimizer = optim.Adam(self.qnetwork_local.parameters(), lr=LR)
         self.policy_optimizer = optim.Adam(self.policy_network.parameters(), lr=LR2)
-        self.qnetwork_explore_optimizer = optim.Adam(self.qnetwork_explore.parameters(), lr=LR)
-        self.policy_explore_optimizer = optim.Adam(self.policy_network_explore.parameters(), lr=LR2)
-        self.state_network_optimizer = optim.Adam(self.state_network.parameters(), lr=LR2)
 
         # Replay memory
         self.memory = ReplayBuffer(action_size, BUFFER_SIZE, BATCH_SIZE, seed)
         # Initialize time step (for updating every UPDATE_EVERY steps)
         self.t_step = 0
         self.t_step2 = 0
-        
-        # Freeze the embedding model
-        self.static_state_network.eval()
 
     def step(self, state, action, reward, next_state, done):
         # Save experience in replay memory
@@ -91,25 +78,13 @@ class Agent():
         """
         state = torch.from_numpy(state).float().unsqueeze(0).to(device)
         self.policy_network.eval()
-        self.policy_network_explore.eval()
         with torch.no_grad():
-            action_policy = F.softmax(self.policy_network(state), dim=1)
-            action_policy_explore = F.softmax(self.policy_network_explore(state), dim=1)
+            action_policy_mu, _ = self.policy_network(state)
+            action_policy = F.softmax(action_policy_mu, dim=1)
         self.policy_network.train()
-        self.policy_network_explore.train()
 
-        def softmax(x):
-            e_x = np.exp(x - np.max(x))
-            return e_x / e_x.sum(axis=1) 
-        
         action_policy = action_policy.data.cpu().numpy().astype(float)
         action_policy /= action_policy.sum(axis=1)
-
-        action_policy_explore = action_policy_explore.data.cpu().numpy().astype(float)
-        action_policy_explore /= action_policy_explore.sum(axis=1)
-
-        action_policy_avg = softmax(action_policy * action_policy_explore)
-        #action_policy_avg /= action_policy_avg.sum(axis=1)
 
         return np.argmax(np.random.multinomial(1, action_policy[0])).astype(int)
 
@@ -124,10 +99,8 @@ class Agent():
         states, actions, rewards, next_states, dones = experiences
 
         # Get expected predicted Q values (for next states) from target model and the action policy network
-        action_policy_next = F.softmax(self.policy_network(next_states).detach(), dim=1).unsqueeze(1)
-        #action_policy_explore_next = F.softmax(self.policy_network_explore(next_states).detach(), dim=1).unsqueeze(1)
-        #action_policy_avg_next = F.softmax(action_policy_next * action_policy_explore_next, dim=1)
-
+        action_policy_next_mu, _ = self.policy_network(next_states)
+        action_policy_next = F.softmax(action_policy_next_mu.detach(), dim=1).unsqueeze(1)
         
         self.qnetwork_target.eval()
         Q_target_mu, Q_target_sigma = self.qnetwork_target(next_states)
@@ -147,17 +120,11 @@ class Agent():
         self.qnetwork_local.train()
         
         def GAUSS_NLL(mu, sigmasq, target):
-            #print(mu)
-            #print(sigmasq)
-            #print(target)
-            #print(torch.distributions.Normal(mu, sigmasq).log_prob(target))
             log_likelihood = torch.distributions.Normal(mu, sigmasq+1e-4).log_prob(target)
             loss = torch.mean(-log_likelihood)
             return loss
         
         # Compute loss
-        #loss = F.mse_loss(Q_expected_mu, Q_targets)
-        
         loss = GAUSS_NLL(Q_expected_mu, Q_expected_sigma, Q_targets)
         # Minimize the loss
         self.qnetwork_optimizer.zero_grad()
@@ -165,13 +132,12 @@ class Agent():
         self.qnetwork_optimizer.step()
 
 
-
         self.t_step2 = (self.t_step2 + 1) % UPDATE_EVERY2
         if self.t_step2 == 0:
 
             # Action policy
             Q_max = Q_local_mu.detach().max(1)[1] # maximum Q value
-            policy = self.policy_network(states)
+            policy, _ = self.policy_network(states)
 
             policy_loss = F.cross_entropy(policy, Q_max)
 
@@ -182,18 +148,13 @@ class Agent():
 
             # Exploration policy, calculated on next state with target Q network
             Q_explore_max = Q_target_sigma.detach().max(1)[1] # maximum entropy
-            #policy_explore = self.policy_network_explore(next_states)
-            policy_explore = self.policy_network(next_states)
+            policy_explore, _ = self.policy_network(next_states)
 
             policy_explore_loss = F.cross_entropy(policy_explore, Q_explore_max)
 
             self.policy_optimizer.zero_grad()
             policy_explore_loss.backward()
             self.policy_optimizer.step()
-
-            #self.policy_explore_optimizer.zero_grad()
-            #policy_explore_loss.backward()
-            #self.policy_explore_optimizer.step()
 
         # ------------------- update target network ------------------- #
         self.soft_update(self.qnetwork_local, self.qnetwork_target, TAU)
