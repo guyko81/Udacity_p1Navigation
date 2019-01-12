@@ -33,16 +33,16 @@ class QNetwork(nn.Module):
         """Build a network that maps state -> action values."""
         x = self.fc1(state)
         x = F.relu(x)
-        x = F.dropout(x, p=0.1)
+        #x = F.dropout(x, p=0.1)
         x = self.fc2(x)
         x = F.relu(x)
-        x = F.dropout(x, p=0.1)
+        #x = F.dropout(x, p=0.1)
         x = self.fc3(x)
         x = F.relu(x)
-        x = F.dropout(x, p=0.1)
+        #x = F.dropout(x, p=0.1)
         x = self.fc4(x)
         x = F.relu(x)
-        x = F.dropout(x, p=0.1)
+        #x = F.dropout(x, p=0.1)
         x = self.fc5(x)
         x = F.relu(x)
         
@@ -50,7 +50,7 @@ class QNetwork(nn.Module):
         V_ = F.relu(V_)
         #V = self.V(V_)
         out_sigma = self.V(V_)
-        out_sigma = F.softplus(out_sigma)
+        sigmasq = out_sigma*out_sigma
 
         A_ = self.A_(x)
         A_ = F.relu(A_)
@@ -59,4 +59,4 @@ class QNetwork(nn.Module):
 
         #out = V + A - torch.mean(A, dim=1, keepdim=True)
 
-        return out_mu, out_sigma
+        return out_mu, sigmasq

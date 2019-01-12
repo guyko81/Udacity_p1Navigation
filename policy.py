@@ -16,10 +16,11 @@ class Policy(nn.Module):
         super(Policy, self).__init__()
         self.seed = torch.manual_seed(seed)
         "*** YOUR CODE HERE ***"
-        hidden_sizes = [64, 64]
+        hidden_sizes = [32, 32, 32]
         self.fc1 = nn.Linear(state_size, hidden_sizes[0])
         self.fc2 = nn.Linear(hidden_sizes[0], hidden_sizes[1])
-        self.out = nn.Linear(hidden_sizes[1], action_size)
+        self.fc3 = nn.Linear(hidden_sizes[1], hidden_sizes[2])
+        self.out = nn.Linear(hidden_sizes[2], action_size)
 
     def forward(self, state):
         """Build a network that maps state -> action values."""
@@ -27,6 +28,8 @@ class Policy(nn.Module):
         x = F.relu(x)
         x = self.fc2(x)
         x = F.relu(x)
+        #x = self.fc3(x)
+        #x = F.relu(x)
         x = self.out(x)
         
         return x

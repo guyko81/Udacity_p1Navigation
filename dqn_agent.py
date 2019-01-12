@@ -18,7 +18,7 @@ GAMMA = 0.99            # discount factor
 TAU = 1e-3              # for soft update of target parameters
 LR = 5e-4               # learning rate 
 UPDATE_EVERY = 1        # how often to update the network
-UPDATE_EVERY2 = 2
+UPDATE_EVERY2 = 1
 LR2 = 5e-4
 num_of_batch_step = 1
 
@@ -102,13 +102,16 @@ class Agent():
             e_x = np.exp(x - np.max(x))
             return e_x / e_x.sum(axis=1) 
         
-        action_policy = softmax(action_policy.data.cpu().numpy().astype(float))
+        action_policy = action_policy.data.cpu().numpy().astype(float)
+        action_policy /= action_policy.sum(axis=1)
 
-        action_policy_explore = softmax(action_policy_explore.data.cpu().numpy().astype(float))
+        action_policy_explore = action_policy_explore.data.cpu().numpy().astype(float)
+        action_policy_explore /= action_policy_explore.sum(axis=1)
 
         action_policy_avg = softmax(action_policy * action_policy_explore)
+        #action_policy_avg /= action_policy_avg.sum(axis=1)
 
-        return np.argmax(np.random.multinomial(1, action_policy_avg[0])).astype(int)
+        return np.argmax(np.random.multinomial(1, action_policy[0])).astype(int)
 
         
     def learn(self, experiences, gamma):
@@ -144,12 +147,17 @@ class Agent():
         self.qnetwork_local.train()
         
         def GAUSS_NLL(mu, sigmasq, target):
-            log_likelihood = torch.distributions.Normal(mu, sigmasq).log_prob(target)
+            #print(mu)
+            #print(sigmasq)
+            #print(target)
+            #print(torch.distributions.Normal(mu, sigmasq).log_prob(target))
+            log_likelihood = torch.distributions.Normal(mu, sigmasq+1e-4).log_prob(target)
             loss = torch.mean(-log_likelihood)
             return loss
         
         # Compute loss
-        #loss = F.mse_loss(Q_expected, Q_targets)
+        #loss = F.mse_loss(Q_expected_mu, Q_targets)
+        
         loss = GAUSS_NLL(Q_expected_mu, Q_expected_sigma, Q_targets)
         # Minimize the loss
         self.qnetwork_optimizer.zero_grad()
@@ -174,13 +182,18 @@ class Agent():
 
             # Exploration policy, calculated on next state with target Q network
             Q_explore_max = Q_target_sigma.detach().max(1)[1] # maximum entropy
-            policy_explore = self.policy_network_explore(next_states)
+            #policy_explore = self.policy_network_explore(next_states)
+            policy_explore = self.policy_network(next_states)
 
             policy_explore_loss = F.cross_entropy(policy_explore, Q_explore_max)
 
-            self.policy_explore_optimizer.zero_grad()
+            self.policy_optimizer.zero_grad()
             policy_explore_loss.backward()
-            self.policy_explore_optimizer.step()
+            self.policy_optimizer.step()
+
+            #self.policy_explore_optimizer.zero_grad()
+            #policy_explore_loss.backward()
+            #self.policy_explore_optimizer.step()
 
         # ------------------- update target network ------------------- #
         self.soft_update(self.qnetwork_local, self.qnetwork_target, TAU)
