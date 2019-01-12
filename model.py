@@ -33,10 +33,10 @@ class QNetwork(nn.Module):
         """Build a network that maps state -> action values."""
         x = self.fc1(state)
         x = F.relu(x)
-        #x = F.dropout(x, p=0.1)
+        x = F.dropout(x, p=0.1)
         x = self.fc2(x)
         x = F.relu(x)
-        #x = F.dropout(x, p=0.1)
+        x = F.dropout(x, p=0.1)
         x = self.fc3(x)
         x = F.relu(x)
         #x = F.dropout(x, p=0.1)

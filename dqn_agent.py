@@ -99,9 +99,11 @@ class Agent():
         states, actions, rewards, next_states, dones = experiences
 
         # Get expected predicted Q values (for next states) from target model and the action policy network
+        self.policy_network.eval()
         action_policy_next_mu, _ = self.policy_network(next_states)
         action_policy_next = F.softmax(action_policy_next_mu.detach(), dim=1).unsqueeze(1)
-        
+        self.policy_network.train()
+
         self.qnetwork_target.eval()
         Q_target_mu, Q_target_sigma = self.qnetwork_target(next_states)
         self.qnetwork_target.train()
@@ -137,7 +139,9 @@ class Agent():
 
             # Action policy
             Q_max = Q_local_mu.detach().max(1)[1] # maximum Q value
+            self.policy_network.eval()
             policy, _ = self.policy_network(states)
+            self.policy_network.train()
 
             policy_loss = F.cross_entropy(policy, Q_max)
 
@@ -148,7 +152,9 @@ class Agent():
 
             # Exploration policy, calculated on next state with target Q network
             Q_explore_max = Q_target_sigma.detach().max(1)[1] # maximum entropy
+            self.policy_network.eval()
             policy_explore, _ = self.policy_network(next_states)
+            self.policy_network.train()
 
             policy_explore_loss = F.cross_entropy(policy_explore, Q_explore_max)
 
