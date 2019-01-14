@@ -24,7 +24,7 @@ class QNetwork(nn.Module):
         self.fc5 = nn.Linear(hidden_sizes[3], hidden_sizes[4])
 
         self.V_ = nn.Linear(hidden_sizes[4], hidden_sizes[4])
-        self.V = nn.Linear(hidden_sizes[4], 1)
+        self.V = nn.Linear(hidden_sizes[4], action_size)
         self.A_ = nn.Linear(hidden_sizes[4], hidden_sizes[4])
         self.A = nn.Linear(hidden_sizes[4], action_size)
 
