@@ -2,6 +2,7 @@
 
 [image1]: https://user-images.githubusercontent.com/10624937/42135619-d90f2f28-7d12-11e8-8823-82b970a54d7e.gif "Trained Agent"
 [image2]: https://github.com/guyko81/Udacity_p1Navigation/blob/master/episodes51.png "Solved in 51 episodes"
+
 # Project 1: Navigation
 
 ### Introduction
@@ -54,5 +55,6 @@ First I tried to create a Q-network that has a mu and a sigma parameter so I wou
 ### Results
 
 I was able to solve the environment in 51 episodes. Looking at the chart I think that with different seed it would be possible to solve it below 50 episodes. 
+![Solved in 51 episodes][image2]
 
 The saved weights are `policy.pth` and `qnetwork.pth`. 
