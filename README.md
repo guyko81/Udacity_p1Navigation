@@ -39,7 +39,8 @@ In order to use this model one has to download and install the Udacity files pro
 
 ### Report
 
-By running the file `Navigation.ipynb` one can reproduce my results!  
+By running the file `Navigation.ipynb` one can reproduce my results! 
+Both the kernel and the dqn_agent file is based on Udacity nanodegree solutions.
 
 The agent is defined in `dqn_agent.py` where I defined 2 q-networks - a local and a target - for a normal q-learning. The Gamma parameter is 0.99 (1 step future Q value is only considered with 99% weight), the target q-network is updated with Polyak averaging with Tau parameter of 0.001.
 
