@@ -55,6 +55,7 @@ First I tried to create a Q-network that has a mu and a sigma parameter so I wou
 ### Results
 
 I was able to solve the environment in 51 episodes. Looking at the chart I think that with different seed it would be possible to solve it below 50 episodes. 
+
 ![Solved in 51 episodes][image2]
 
 The saved weights are `policy.pth` and `qnetwork.pth`. 
