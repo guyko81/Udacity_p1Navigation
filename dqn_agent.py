@@ -3,8 +3,6 @@ import random
 from collections import namedtuple, deque
 
 from model import QNetwork
-from policy import Policy
-from state import State
 
 import torch
 import torch.nn.functional as F
@@ -121,13 +119,8 @@ class Agent():
         Q_expected_sigma = Q_local_sigma.gather(1, actions)
         self.qnetwork_local.train()
         
-        def GAUSS_NLL(mu, sigmasq, target):
-            log_likelihood = torch.distributions.Normal(mu, sigmasq+1e-4).log_prob(target)
-            loss = torch.mean(-log_likelihood)
-            return loss
-        
         # Compute loss
-        loss = GAUSS_NLL(Q_expected_mu, Q_expected_sigma, Q_targets)
+        loss = F.smooth_l1_loss(Q_expected_mu, Q_targets)
         # Minimize the loss
         self.qnetwork_optimizer.zero_grad()
         loss.backward()

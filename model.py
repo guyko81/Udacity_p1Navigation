@@ -32,28 +32,28 @@ class QNetwork(nn.Module):
     def forward(self, state):
         """Build a network that maps state -> action values."""
         x = self.fc1(state)
-        x = F.relu(x)
+        x = F.elu(x)
         x = F.dropout(x, p=0.1)
         x = self.fc2(x)
-        x = F.relu(x)
+        x = F.elu(x)
         x = F.dropout(x, p=0.1)
         x = self.fc3(x)
-        x = F.relu(x)
+        x = F.elu(x)
         #x = F.dropout(x, p=0.1)
         x = self.fc4(x)
-        x = F.relu(x)
+        x = F.elu(x)
         #x = F.dropout(x, p=0.1)
         x = self.fc5(x)
-        x = F.relu(x)
+        x = F.elu(x)
         
         V_ = self.V_(x)
-        V_ = F.relu(V_)
+        V_ = F.elu(V_)
         #V = self.V(V_)
         out_sigma = self.V(V_)
         sigmasq = out_sigma*out_sigma
 
         A_ = self.A_(x)
-        A_ = F.relu(A_)
+        A_ = F.elu(A_)
         #A = self.A(A_)
         out_mu = self.A(A_)
 
