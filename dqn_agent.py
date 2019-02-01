@@ -127,7 +127,8 @@ class Agent():
             return loss
         
         # Compute loss
-        loss = GAUSS_NLL(Q_expected_mu, Q_expected_sigma, Q_targets)
+        #loss = GAUSS_NLL(Q_expected_mu, Q_expected_sigma, Q_targets)
+        loss = F.smooth_l1_loss(Q_expected_mu, Q_targets)
         # Minimize the loss
         self.qnetwork_optimizer.zero_grad()
         loss.backward()
