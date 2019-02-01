@@ -6,21 +6,23 @@
 
 ### Introduction
 
-For this project, you will train an agent to navigate (and collect bananas!) in a large, square world.  
+This project is a Udacity Reinforcement Learning Nanodegree project, where we had to train an agent to navigate (and collect bananas!) in a large, square world. Below is a trained agent collecting bananas.
 
 ![Trained Agent][image1]
 
-A reward of +1 is provided for collecting a yellow banana, and a reward of -1 is provided for collecting a blue banana.  Thus, the goal of your agent is to collect as many yellow bananas as possible while avoiding blue bananas.  
+A reward of +1 is provided for collecting a yellow banana, and a reward of -1 is provided for collecting a blue banana.  Thus, the goal of our agent was to collect as many yellow bananas as possible while avoiding blue bananas.  
 
-The state space has 37 dimensions and contains the agent's velocity, along with ray-based perception of objects around agent's forward direction.  Given this information, the agent has to learn how to best select actions.  Four discrete actions are available, corresponding to:
+The state space has 37 dimensions and contains the agent's velocity, along with ray-based perception of objects around agent's forward direction.  Given this information, the agent had to learn how to best select actions.  Four discrete actions are available, corresponding to:
 - **`0`** - move forward.
 - **`1`** - move backward.
 - **`2`** - turn left.
 - **`3`** - turn right.
 
-The task is episodic, and in order to solve the environment, your agent must get an average score of +13 over 100 consecutive episodes.
+The task is episodic, and in order to solve the environment, our agent had to get an average score of +13 over 100 consecutive episodes.
 
 ### Getting Started
+
+In order to use this model one has to download and install the Udacity files provided below. The instructions are the following:
 
 1. Download the environment from one of the links below.  You need only select the environment that matches your operating system:
     - Linux: [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/Banana_Linux.zip)
@@ -34,22 +36,23 @@ The task is episodic, and in order to solve the environment, your agent must get
 
 2. Place the file in the DRLND GitHub repository, in the `p1_navigation/` folder, and unzip (or decompress) the file. 
 
-### Instructions
+### Report
 
-Follow the instructions in `Navigation.ipynb` to get started with training your own agent!  
+By running the file `Navigation.ipynb` one can reproduce my results!  
 
-### (Optional) Challenge: Learning from Pixels
+The agent is defined in `dqn_agent.py` where I defined 2 q-networks - a local and a target - for a normal q-learning. The Gamma parameter is 0.99 (1 step future Q value is only considered with 99% weight), the target q-network is updated with Polyak averaging with Tau parameter of 0.001.
 
-After you have successfully completed the project, if you're looking for an additional challenge, you have come to the right place!  In the project, your agent learned from information such as its velocity, along with ray-based perception of objects around its forward direction.  A more challenging task would be to learn directly from pixels!
+I have chosen to build a Policy network that predicted the maximum value of the Q-network. The loss function is cross-entropy. This way I was able to:
 
-To solve this harder task, you'll need to download a new Unity environment.  This environment is almost identical to the project environment, where the only difference is that the state is an 84 x 84 RGB image, corresponding to the agent's first-person view.  (**Note**: Udacity students should not submit a project with this new environment.)
+1. make a stochastic policy acting as I have a probability for each action
+2. the target q-network of next-step can be calculated as the weighted average of values from target q-network - in this way it is possible to avoid Q value overestimation
 
-You need only select the environment that matches your operating system:
-- Linux: [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/VisualBanana_Linux.zip)
-- Mac OSX: [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/VisualBanana.app.zip)
-- Windows (32-bit): [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/VisualBanana_Windows_x86.zip)
-- Windows (64-bit): [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/VisualBanana_Windows_x86_64.zip)
+The Q-network and the Policy network shares the same structure.
 
-Then, place the file in the `p1_navigation/` folder in the DRLND GitHub repository, and unzip (or decompress) the file.  Next, open `Navigation_Pixels.ipynb` and follow the instructions to learn how to use the Python API to control the agent.
+First I tried to create a Q-network that has a mu and a sigma parameter so I would be able to force the Policy network for exploration though it was not necessary for the solution. I left that code part in the `dqn_agent.py` file.
 
-(_For AWS_) If you'd like to train the agent on AWS, you must follow the instructions to [set up X Server](https://github.com/Unity-Technologies/ml-agents/blob/master/docs/Training-on-Amazon-Web-Service.md), and then download the environment for the **Linux** operating system above.
+### Results
+
+I was able to solve the environment in 51 episodes. Looking at the chart I think that with different seed it would be possible to solve it below 50 episodes. 
+
+The saved weights are `policy.pth` and `qnetwork.pth`. 
