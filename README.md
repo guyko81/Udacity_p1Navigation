@@ -37,22 +37,6 @@ In order to use this model one has to download and install the Udacity files pro
 
 2. Place the file in the DRLND GitHub repository, in the `p1_navigation/` folder, and unzip (or decompress) the file. 
 
-### Report
-
-By running the file `Navigation.ipynb` one can reproduce my results! 
-Both the kernel and the dqn_agent file is based on Udacity nanodegree solutions.
-
-The agent is defined in `dqn_agent.py` where I defined 2 q-networks - a local and a target - for a normal q-learning. The Gamma parameter is 0.99 (1 step future Q value is only considered with 99% weight), the target q-network is updated with Polyak averaging with Tau parameter of 0.001.
-
-I have chosen to build a Policy network that predicted the maximum value of the Q-network. The loss function is cross-entropy. This way I was able to:
-
-1. make a stochastic policy acting as I have a probability for each action
-2. the target q-network of next-step can be calculated as the weighted average of values from target q-network - in this way it is possible to avoid Q value overestimation
-
-The Q-network and the Policy network shares the same structure.
-
-First I tried to create a Q-network that has a mu and a sigma parameter so I would be able to force the Policy network for exploration though it was not necessary for the solution. I left that code part in the `dqn_agent.py` file.
-
 ### Results
 
 I was able to solve the environment in 51 episodes. Looking at the chart I think that with different seed it would be possible to solve it below 50 episodes. 
