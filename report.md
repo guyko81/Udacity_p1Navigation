@@ -24,3 +24,10 @@ I was able to solve the environment in 51 episodes. Looking at the chart I think
 ![Solved in 51 episodes][image2]
 
 The saved weights are `policy.pth` and `qnetwork.pth`. 
+
+### Further improvements
+
+The options to improve the model performance seems a bit limited as the result is quite good already. However Dueling DQN might provide some additional improvement with decomposing the value function into state-value and advantage parts. This way the model could avoid trying to fit values on unescapable situations where no good action is present.
+The other option would be to use prioritized experience replay so that the model could learn faster from higher error predictions. 
+
+In the future I will upgrade the process with these 2 ideas and see the results. 
