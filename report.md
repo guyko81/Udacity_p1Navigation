@@ -11,7 +11,7 @@ The final model architecture for the Q-value estimation builds up from 7 feedfor
 The first 2 layers are followed by a Dropout layer with 0.1 rate in order to make the model more robust. 
 
 The update rule for the Q-function is a bit different from the normal Q-learning method: I have chosen to use the Policy network predictions on next_state to calculate the probabilities of each action and have weighted the different Q-values from the target Q-function with these values. 
-This way I was able to defeat the model from overestimating the target values. After some episodes the Policy network became capable of predicting the highest valued action so the method became more-and-more close to the max(Q_target) calculation.
+This way I was able to prevent the model from overestimating the target values. After some episodes the Policy network became capable of predicting the highest valued action so the method became more-and-more close to the max(Q_target) calculation.
 
 I have chosen to build a Policy network that predicted the maximum value of the Q-network. The loss function is cross-entropy. This way I was also able to make a stochastic policy acting as I have a probability for each action
 
